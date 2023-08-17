@@ -47,9 +47,6 @@ int main()
         recorder.stop();
 
 
-        if(recorder.getBuffer().getSampleCount() < 1)
-			continue;
-
         const sf::SoundBuffer& soundBuffer = recorder.getBuffer();
 
 
@@ -65,11 +62,6 @@ int main()
         sf::Packet packet;
         packet.append(bytes, byteCount);
 
-        //// Create an sf::UdpSocket and send the packet
-        //sf::UdpSocket socket;
-        //sf::IpAddress remoteAddress = "127.0.0.1"; // Replace with the destination address
-        //unsigned short remotePort = 12345; // Replace with the destination port
-        //socket.send(packet, remoteAddress, remotePort);
 
         int sendBytes = send(ClientSocket, (char*)packet.getData(), packet.getDataSize(), 0);
         cout << "sendBytes : " << sendBytes << endl;

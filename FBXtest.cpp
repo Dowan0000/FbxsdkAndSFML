@@ -4,6 +4,7 @@
 
 #include <WinSock2.h>
 #include <thread>
+#include <mutex>
 
 #include <fbxsdk.h>
 
@@ -15,10 +16,49 @@ using namespace std;
 
 int Reset = 0;
 
-void SendMotion(FbxTime start, FbxTime end, int childCount, FbxNode* rootNode, SOCKET MotionSocket, char* RecvBuf)
+void SendMotion(FbxScene* scene, SOCKET MotionSocket, char* RecvBuf)
 {
 	int Reset = 0;
 	char SendMotionBuf[] = { 80,67,76,83,48,48,48,50,0,0,0,0,0,0,0,0,50,48,50,51,48,56,48,50,49,55,53,52,52,53,0,0,1,100,RecvBuf[34],RecvBuf[35],RecvBuf[36],RecvBuf[37],0,1,197,169,24,0,70,17,148,0,199,6,147,0,0,21,  61,143,92,41,128,0,0,0,63,128,0,0,60,163,215,10,189,184,81,236,62,5,30,184,63,125,112,164,188,35,215,10,61,35,215,10,62,66,143,92,63,122,225,72,61,143,92,41,60,35,215,10,60,245,194,143,63,128,0,0,61,184,81,236,189,184,81,236,189,245,194,143,63,125,112,164,61,76,204,205,61,117,194,143,190,66,143,92,63,122,225,72,60,245,194,143,0,0,0,0,189,143,92,41,63,128,0,0,60,163,215,10,62,56,81,236,188,245,194,143,63,122,225,72,60,245,194,143,62,66,143,92,188,163,215,10,63,122,225,72,60,245,194,143,62,76,204,205,188,163,215,10,63,122,225,72,61,35,215,10,62,46,20,123,128,0,0,0,63,122,225,72,60,163,215,10,62,46,20,123,128,0,0,0,63,122,225,72,60,163,215,10,62,25,153,154,60,35,215,10,63,125,112,164,60,35,215,10,62,76,204,205,190,56,81,236,63,117,194,143,60,35,215,10,60,245,194,143,191,33,71,174,63,69,30,184,61,143,92,41,62,128,0,0,191,25,153,154,63,53,194,143,190,133,30,184,61,184,81,236,190,194,143,92,63,102,102,102,190,66,143,92,62,97,71,174,62,15,92,41,63,117,194,143,61,184,81,236,62,235,133,31,63,12,204,205,63,25,153,154,62,174,20,123,62,97,71,174,63,35,215,10,63,48,163,215,62,138,61,113,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 };
+
+
+	FbxNode* rootNode = scene->GetRootNode();
+	if (rootNode == nullptr)
+		return;
+
+
+	int childCount = rootNode->GetChildCount();
+	std::cout << "childCount : " << childCount << endl;
+
+
+	//cout << "<<<<<" << childNode->GetName() << ">>>>>" << endl;
+
+	FbxMesh* mesh = rootNode->GetMesh();
+	if (mesh == nullptr)
+	{
+		std::cout << "No Mesh" << endl;
+	}
+
+
+	// 애니메이션 정보
+	FbxAnimStack* animStack = scene->GetSrcObject<FbxAnimStack>(0);
+	if (animStack)
+		std::cout << "animStack : " << animStack->GetName() << endl;
+	else
+	{
+		std::cout << "animStack : " << "No AnimStack" << endl;
+		return;
+	}
+
+	FbxString animStackName = animStack->GetName();
+	FbxTakeInfo* takeInfo = scene->GetTakeInfo(animStackName);
+	FbxTime start = takeInfo->mLocalTimeSpan.GetStart();
+	FbxTime end = takeInfo->mLocalTimeSpan.GetStop();
+	FbxLongLong duration = end.GetFrameCount(FbxTime::eFrames30) - start.GetFrameCount(FbxTime::eFrames30) + 1;
+	std::cout << "duration : " << duration << endl;
+
+	int num = 0;
+
 
 	for (FbxLongLong frame = start.GetFrameCount(FbxTime::eFrames30); frame <= end.GetFrameCount(FbxTime::eFrames30); ++frame)
 	{
@@ -86,10 +126,10 @@ void SendMotion(FbxTime start, FbxTime end, int childCount, FbxNode* rootNode, S
 					// k == 2 || k == 4 || k == 5 || k == 6 || k == 28 || k == 29 || k == 32 || k == 52 || k == 53 || k == 54 || k == 55 || k == 56 || k == 57 || k == 73 || k == 74 || k == 75 || k == 81 || k == 111 || k == 112 || k == 113 || k == 119
 					// k == 0 || k == 1 || k == 2 || k == 3 || k == 4 || k == 5 || k == 6 || k == 7 || k == 8 || k == 9 || k == 10 || k == 31 || k == 32 || k == 33 || k == 34 || k == 55 || k == 56 || k == 57 || k == 60 || k == 61 || k == 62
 					// k == 1 || k == 2 || k == 3 || k == 4 || k == 5 || k == 6 || k == 7 || k == 8 || k == 9 || k == 10 || k == 11 || k == 32 || k == 33 || k == 34 || k == 35 || k == 56 || k == 57 || k == 58 || k == 61 || k == 62 || k == 63
-					if(k == 1 || k == 2 || k == 3 || k == 4 || k == 5 || k == 6 || k == 7 || k == 8 || k == 26 || k == 27 || k == 65 || k == 66 || k == 67 || k == 68 || k == 88 || k == 89 || k == 91 || k == 94 || k == 95 || k == 97 || k == 99)
+					if(k == 2 || k == 3 || k == 4 || k == 5 || k == 6 || k == 7 || k == 8 || k == 9 || k == 27 || k == 28 || k == 66 || k == 67 || k == 68 || k == 69 || k == 89 || k == 90 || k == 92 || k == 95 || k == 96 || k == 98 || k == 100)
 					{
 						//printf("nodeName : %s, Quaternion : %f, %f, %f, %f\n", linkNode->GetName(), quaternion[0], quaternion[1], quaternion[2], quaternion[3]);
-						if (k == 1)
+						if (k == 2)
 						{
 							//printf("%.2f,%.2f,%.2f", translation[0], translation[1], translation[2]);
 							//printf("Frame : %d , nodeName : %s, Translation : %f, %f, %f\n", (int)frame, linkNode->GetName(), translation[0], translation[1], translation[2]);
@@ -101,10 +141,10 @@ void SendMotion(FbxTime start, FbxTime end, int childCount, FbxNode* rootNode, S
 								memcpy(Bytes, &Trans, 4);
 
 								//SendBuf의 40~51번째 바이트에 저장
-								SendMotionBuf[40 + i * 4] = Bytes[0];
-								SendMotionBuf[41 + i * 4] = Bytes[1];
-								SendMotionBuf[42 + i * 4] = Bytes[2];
-								SendMotionBuf[43 + i * 4] = Bytes[3];
+								SendMotionBuf[43 + i * 4] = Bytes[0];
+								SendMotionBuf[42 + i * 4] = Bytes[1];
+								SendMotionBuf[41 + i * 4] = Bytes[2];
+								SendMotionBuf[40 + i * 4] = Bytes[3];
 
 							}							
 
@@ -188,17 +228,56 @@ void SendMotion(FbxTime start, FbxTime end, int childCount, FbxNode* rootNode, S
 
 				this_thread::sleep_for(10ms);
 
-				std::cout << endl;
+				//std::cout << endl;
 
 			}
 		}
 	}
 }
 
-void SendFacial(FbxTime start, FbxTime end, int childCount, FbxNode* rootNode, FbxAnimStack* animStack, SOCKET FacialSocket, char* RecvBuf)
+void SendFacial(FbxScene* scene, SOCKET FacialSocket, char* RecvBuf)
 {
 	int Reset = 0;
 	char SendFacialBuf[] = { 80,67,76,83,48,48,48,53,0,0,0,0,0,0,0,0,50,48,50,51,48,56,48,50,49,55,53,52,52,53,0,0,0,96,  RecvBuf[34],RecvBuf[35],RecvBuf[36],RecvBuf[37],0,0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 19, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+
+
+	FbxNode* rootNode = scene->GetRootNode();
+	if (rootNode == nullptr)
+		return;
+
+
+	int childCount = rootNode->GetChildCount();
+	std::cout << "childCount : " << childCount << endl;
+
+
+	//cout << "<<<<<" << childNode->GetName() << ">>>>>" << endl;
+
+	FbxMesh* mesh = rootNode->GetMesh();
+	if (mesh == nullptr)
+	{
+		std::cout << "No Mesh" << endl;
+	}
+
+
+	// 애니메이션 정보
+	FbxAnimStack* animStack = scene->GetSrcObject<FbxAnimStack>(0);
+	if (animStack)
+		std::cout << "animStack : " << animStack->GetName() << endl;
+	else
+	{
+		std::cout << "animStack : " << "No AnimStack" << endl;
+		return;
+	}
+
+	FbxString animStackName = animStack->GetName();
+	FbxTakeInfo* takeInfo = scene->GetTakeInfo(animStackName);
+	FbxTime start = takeInfo->mLocalTimeSpan.GetStart();
+	FbxTime end = takeInfo->mLocalTimeSpan.GetStop();
+	FbxLongLong duration = end.GetFrameCount(FbxTime::eFrames30) - start.GetFrameCount(FbxTime::eFrames30) + 1;
+	std::cout << "duration : " << duration << endl;
+
+	int num = 0;
+
 
 	for (FbxLongLong frame = start.GetFrameCount(FbxTime::eFrames30); frame <= end.GetFrameCount(FbxTime::eFrames30); ++frame)
 	{
@@ -211,6 +290,7 @@ void SendFacial(FbxTime start, FbxTime end, int childCount, FbxNode* rootNode, F
 		for (int i = 0; i < childCount; ++i)
 		{
 			FbxNode* childNode = rootNode->GetChild(i);
+			
 			//cout << "<<<<<" << childNode->GetName() << ">>>>>" << endl;
 
 			FbxMesh* mesh = childNode->GetMesh();
@@ -220,65 +300,44 @@ void SendFacial(FbxTime start, FbxTime end, int childCount, FbxNode* rootNode, F
 				continue;
 			}
 
-			
 
-			//모프타겟 데이터 추출
+			FbxBlendShape* blendShape = static_cast<FbxBlendShape*>(mesh->GetDeformer(0, FbxDeformer::eBlendShape));
 
-			int morphTargetCount = mesh->GetDeformerCount(FbxDeformer::eBlendShape);
-			//cout << "morphTargetCount : " << morphTargetCount << endl;
+			// Get the number of channels (shapes) within the blend shape
+			int channelCount = blendShape->GetBlendShapeChannelCount();
 
-			// Loop through the Morph Targets (blend shapes) and extract vertex positions
-			for (int morphIndex = 0; morphIndex < morphTargetCount; ++morphIndex)
+			// Loop through the channels (shapes) and extract vertex positions
+			for (int channelIndex = 0; channelIndex < channelCount; ++channelIndex)
 			{
-				FbxBlendShape* blendShape = static_cast<FbxBlendShape*>(mesh->GetDeformer(morphIndex, FbxDeformer::eBlendShape));
+				// fbxanimlayer
+				FbxAnimLayer* animLayer = animStack->GetMember<FbxAnimLayer>();
 
-				// Get the number of channels (shapes) within the blend shape
-				int channelCount = blendShape->GetBlendShapeChannelCount();
-
-				// Loop through the channels (shapes) and extract vertex positions
-				for (int channelIndex = 0; channelIndex < channelCount; ++channelIndex)
+				// shape의 value를 가져옴
+				FbxAnimCurve* animCurve = mesh->GetShapeChannel(0, channelIndex, animLayer, true);
+				if (animCurve)
 				{
-					FbxBlendShapeChannel* channel = blendShape->GetBlendShapeChannel(channelIndex);
+					int keyCount = animCurve->KeyGetCount();
 
-					// Get the channel (shape) name (morph target name)
-					const char* morphTargetName = channel->GetName();
+					FbxAnimCurveKey key = animCurve->KeyGet(frame);
+					float value = key.GetValue();
 
-					// Get the weight of the channel (shape)
-					double weight = channel->DeformPercent;
-					//cout << "weight : " << weight << endl;
+					//cout << "value : " << value << endl;
 
-					// Get the number of control points (vertices) in the channel (shape)
-					int vertexCount = channel->GetTargetShapeCount();
-
-					// fbxanimlayer
-					FbxAnimLayer* animLayer = animStack->GetMember<FbxAnimLayer>();
-
-					// shape의 value를 가져옴
-					FbxAnimCurve* animCurve = mesh->GetShapeChannel(morphIndex, channelIndex, animLayer, true);
-					if (animCurve)
+					if (channelIndex == 1 || channelIndex == 2 || channelIndex == 4 || channelIndex == 6 || channelIndex == 7 || channelIndex == 8 || channelIndex == 9 || channelIndex == 10 || channelIndex == 11 || channelIndex == 12 || channelIndex == 13 || channelIndex == 14 || channelIndex == 15 || channelIndex == 16 || channelIndex == 17 || channelIndex == 18 || channelIndex == 19 || channelIndex == 22 || channelIndex == 23 || channelIndex == 24 || channelIndex == 25 || channelIndex == 26 || channelIndex == 27 || channelIndex == 28 || channelIndex == 29 || channelIndex == 30 || channelIndex == 31 || channelIndex == 32 || channelIndex == 33 || channelIndex == 34 || channelIndex == 35 || channelIndex == 36 || channelIndex == 37 || channelIndex == 38 || channelIndex == 39 || channelIndex == 40 || channelIndex == 41 || channelIndex == 42 || channelIndex == 43 || channelIndex == 44 || channelIndex == 45 || channelIndex == 46 || channelIndex == 47 || channelIndex == 52)
 					{
-						int keyCount = animCurve->KeyGetCount();
+						float FacialData = value;
+						unsigned char Bytes[4];
+						memcpy(Bytes, &FacialData, 4);
 
-						FbxAnimCurveKey key = animCurve->KeyGet(frame);
-						float value = key.GetValue();
+						//SendBuf의 54~번째 바이트에 저장
+						SendFacialBuf[57 + (Reset * 4)] = Bytes[0];
+						SendFacialBuf[56 + (Reset * 4)] = Bytes[1];
+						SendFacialBuf[55 + (Reset * 4)] = Bytes[2];
+						SendFacialBuf[54 + (Reset * 4)] = Bytes[3];
 
-						if (channelIndex == 2 || channelIndex == 17 || channelIndex == 19 || channelIndex == 20 || channelIndex == 24 || channelIndex == 25 || channelIndex == 26 || channelIndex == 27 || channelIndex == 28 || channelIndex == 29 || channelIndex == 35 || channelIndex == 36 || channelIndex == 41 || channelIndex == 42 || channelIndex == 46 || channelIndex == 47 || channelIndex == 69 || channelIndex == 70 || channelIndex == 74)
-						{
-							float FacialData = value;
-							unsigned char Bytes[4];
-							memcpy(Bytes, &FacialData, 4);
+						Reset = Reset + 1;
 
-							//SendBuf의 54~번째 바이트에 저장
-							SendFacialBuf[57 + (Reset * 4)] = Bytes[0];
-							SendFacialBuf[56 + (Reset * 4)] = Bytes[1];
-							SendFacialBuf[55 + (Reset * 4)] = Bytes[2];
-							SendFacialBuf[54 + (Reset * 4)] = Bytes[3];
-
-							Reset = Reset + 1;
-
-						}
 					}
-
 				}
 
 				int SendFacialBytes = send(FacialSocket, SendFacialBuf, sizeof(SendFacialBuf), 0);
@@ -287,6 +346,76 @@ void SendFacial(FbxTime start, FbxTime end, int childCount, FbxNode* rootNode, F
 
 				this_thread::sleep_for(10ms);
 			}
+
+			
+			////모프타겟 데이터 추출
+
+			//int morphTargetCount = mesh->GetDeformerCount(FbxDeformer::eBlendShape);
+			//cout << "morphTargetCount : " << morphTargetCount << endl;
+
+			//// Loop through the Morph Targets (blend shapes) and extract vertex positions
+			//for (int morphIndex = 0; morphIndex < morphTargetCount; ++morphIndex)
+			//{
+			//	FbxBlendShape* blendShape = static_cast<FbxBlendShape*>(mesh->GetDeformer(morphIndex, FbxDeformer::eBlendShape));
+
+			//	// Get the number of channels (shapes) within the blend shape
+			//	int channelCount = blendShape->GetBlendShapeChannelCount();
+
+			//	// Loop through the channels (shapes) and extract vertex positions
+			//	for (int channelIndex = 0; channelIndex < channelCount; ++channelIndex)
+			//	{
+			//		//FbxBlendShapeChannel* channel = blendShape->GetBlendShapeChannel(channelIndex);
+
+			//		// Get the channel (shape) name (morph target name)
+			//		//const char* morphTargetName = channel->GetName();
+			//		//cout << "morphTargetName : " << morphTargetName << endl;
+
+			//		// Get the weight of the channel (shape)
+			//		//double weight = channel->DeformPercent;
+			//		//cout << "weight : " << weight << endl;
+
+			//		// Get the number of control points (vertices) in the channel (shape)
+			//		//int vertexCount = channel->GetTargetShapeCount();
+
+			//		// fbxanimlayer
+			//		FbxAnimLayer* animLayer = animStack->GetMember<FbxAnimLayer>();
+
+			//		// shape의 value를 가져옴
+			//		FbxAnimCurve* animCurve = mesh->GetShapeChannel(morphIndex, channelIndex, animLayer, true);
+			//		if (animCurve)
+			//		{
+			//			int keyCount = animCurve->KeyGetCount();
+
+			//			FbxAnimCurveKey key = animCurve->KeyGet(frame);
+			//			float value = key.GetValue();
+
+			//			//cout << "value : " << value << endl;
+
+			//			if (channelIndex == 1 || channelIndex == 2 || channelIndex == 4 || channelIndex == 6 || channelIndex == 7 || channelIndex == 8 || channelIndex == 9 || channelIndex == 10 || channelIndex == 11 || channelIndex == 12 || channelIndex == 13 || channelIndex == 14 || channelIndex == 15 || channelIndex == 16 || channelIndex == 17 || channelIndex == 18 || channelIndex == 19 || channelIndex == 22 || channelIndex == 23 || channelIndex == 24 || channelIndex == 25 || channelIndex == 26 || channelIndex == 27 || channelIndex == 28 || channelIndex == 29 || channelIndex == 30 || channelIndex == 31 || channelIndex == 32 || channelIndex == 33 || channelIndex == 34 || channelIndex == 35 || channelIndex == 36 || channelIndex == 37 || channelIndex == 38 || channelIndex == 39 || channelIndex == 40 || channelIndex == 41 || channelIndex == 42 || channelIndex == 43 || channelIndex == 44 || channelIndex == 45 || channelIndex == 46 || channelIndex == 47 || channelIndex == 52)
+			//			{
+			//				float FacialData = value;
+			//				unsigned char Bytes[4];
+			//				memcpy(Bytes, &FacialData, 4);
+
+			//				//SendBuf의 54~번째 바이트에 저장
+			//				SendFacialBuf[57 + (Reset * 4)] = Bytes[0];
+			//				SendFacialBuf[56 + (Reset * 4)] = Bytes[1];
+			//				SendFacialBuf[55 + (Reset * 4)] = Bytes[2];
+			//				SendFacialBuf[54 + (Reset * 4)] = Bytes[3];
+
+			//				Reset = Reset + 1;
+
+			//			}
+			//		}
+
+			//	}
+
+			//	int SendFacialBytes = send(FacialSocket, SendFacialBuf, sizeof(SendFacialBuf), 0);
+			//	//cout << SendFacialBytes << endl;
+			//	Reset = 0;
+
+			//	this_thread::sleep_for(10ms);
+			//}
 			
 		}
 
@@ -444,7 +573,24 @@ int main()
 		this_thread::sleep_for(1s);
 	}*/
 
-	
+
+	// recv 
+	SOCKET recvMotionSocket = socket(AF_INET, SOCK_STREAM, 0);
+
+	SOCKADDR_IN recvMotionAddr;
+	ZeroMemory(&recvMotionAddr, sizeof(recvMotionAddr));
+	recvMotionAddr.sin_family = AF_INET;
+	recvMotionAddr.sin_port = htons(9999);
+	recvMotionAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
+
+	bind(recvMotionSocket, (SOCKADDR*)&recvMotionAddr, sizeof(recvMotionAddr));
+	listen(recvMotionSocket, SOMAXCONN);
+	SOCKET recvMotion = accept(recvMotionSocket, NULL, NULL);
+	if(recvMotion == INVALID_SOCKET)
+		cout << "Accept Fail" << endl;
+
+	cout << "Accept Success" << endl;
+
 
 	FbxManager* manager = FbxManager::Create();
 	FbxIOSettings* ios = FbxIOSettings::Create(manager, IOSROOT);
@@ -452,305 +598,34 @@ int main()
 	FbxImporter* importer = FbxImporter::Create(manager, "");
 	FbxScene* scene = FbxScene::Create(manager, "");
 
-	const char* fbxFilePath = "C:/FBXtest/dance_NewAnimation3.fbx";
-	if (importer->Initialize(fbxFilePath, -1, manager->GetIOSettings()))
-		importer->Import(scene);
-	else
-		return 0;
 
-
-
-	FbxNode* rootNode = scene->GetRootNode();
-	if (rootNode == nullptr)
-		return 0;
-
-
-	int childCount = rootNode->GetChildCount();
-	std::cout << "childCount : " << childCount << endl;
-    
-	
-	//cout << "<<<<<" << childNode->GetName() << ">>>>>" << endl;
-
-	FbxMesh* mesh = rootNode->GetMesh();
-	if (mesh == nullptr)
+	while (true)
 	{
-		std::cout << "No Mesh" << endl;
+		char recvMotionBuf[1024] = { 0, };
+		recv(recvMotion, recvMotionBuf, sizeof(recvMotionBuf), 0);
+
+		if (recvMotionBuf[0] == 1)
+		{
+			cout << "recvMotionBuf[1] == 1" << endl;
+			const char* fbxFilePath = "C:/FBXtest/20230821_face_dance_anim_Anim.FBX";
+			if (importer->Initialize(fbxFilePath, -1, manager->GetIOSettings()))
+			{
+				cout << "20230821_face_dance_anim.FBX" << endl;
+				importer->Import(scene);
+			}
+			else
+				return 0;
+		}
+
+		
+		//thread motionThread(SendMotion, scene, MotionSocket, RecvBuf);
+		thread facialThread(SendFacial, scene, FacialSocket, RecvBuf);
+
+		//motionThread.join();
+		facialThread.join();
 	}
 
-
-
-
-	// 애니메이션 정보
-	FbxAnimStack* animStack = scene->GetSrcObject<FbxAnimStack>(0);
-	if (animStack)
-		std::cout << "animStack : " << animStack->GetName() << endl;
-	else
-	{
-		std::cout << "animStack : " << "No AnimStack" << endl;
-		return 0;
-	}
-
-	FbxString animStackName = animStack->GetName();
-	FbxTakeInfo* takeInfo = scene->GetTakeInfo(animStackName);
-	FbxTime start = takeInfo->mLocalTimeSpan.GetStart();
-	FbxTime end = takeInfo->mLocalTimeSpan.GetStop();
-	FbxLongLong duration = end.GetFrameCount(FbxTime::eFrames30) - start.GetFrameCount(FbxTime::eFrames30) + 1;
-	std::cout << "duration : " << duration << endl;
-
-	int num = 0;
-
-
-	thread motionThread(SendMotion, start, end, childCount, rootNode, MotionSocket, RecvBuf);
-	thread facialThread(SendFacial, start, end, childCount, rootNode, animStack, FacialSocket, RecvBuf);
 	
-
-
-	motionThread.join();
-	facialThread.join();
-
-	// 매프레임당 각 본의 회전값
-	//for (FbxLongLong frame = start.GetFrameCount(FbxTime::eFrames30); frame <= end.GetFrameCount(FbxTime::eFrames30); ++frame)
-	//{
-	//	// Rotation value per born
-	//	FbxTime time;
-	//	time.SetFrame(frame, FbxTime::eFrames30);
-
-
-	//	// 1. Get Mesh
-	//	for (int i = 0; i < childCount; ++i)
-	//	{
-	//		FbxNode* childNode = rootNode->GetChild(i);
-	//		//cout << "<<<<<" << childNode->GetName() << ">>>>>" << endl;
-
-	//		FbxMesh* mesh = childNode->GetMesh();
-	//		if (mesh == nullptr)
-	//		{
-	//			//cout << "No Mesh" << endl;
-	//			continue;
-	//		}
-
-	//		
-	//		int deformerCount = mesh->GetDeformerCount();
-	//		for (int j = 0; j < deformerCount; ++j)
-	//		{
-	//			FbxDeformer* deformer = mesh->GetDeformer(j);
-	//			FbxSkin* skin = (FbxSkin*)deformer;
-	//			if (skin == nullptr)
-	//				continue;
-
-	//			
-	//			//std::cout << num;
-
-	//			//num++;
-	//			
-	//			
-	//			int clusterCount = skin->GetClusterCount();
-	//			//cout << "clusterCount : " << clusterCount << endl;
-
-
-	//			for (int k = 0; k < clusterCount; ++k)
-	//			{
-	//				FbxCluster* cluster = skin->GetCluster(k);
-	//				FbxNode* linkNode = cluster->GetLink();
-	//				if (linkNode == nullptr)
-	//					continue;
-
-	//				FbxAMatrix matrix = cluster->GetLink()->EvaluateGlobalTransform(time);
-	//				FbxVector4 translation = matrix.GetT();
-	//				FbxVector4 rotation = matrix.GetR();
-	//				
-	//				
-
-	//				// matrix의 GetQ 구하기
-	//				FbxQuaternion quaternion = matrix.GetQ();
-
-	//				//cout << "Translation : " << translation[0] << ", " << translation[1] << ", " << translation[2] << endl;
-	//				//cout << "Rotation : " << rotation[0] << ", " << rotation[1] << ", " << rotation[2] << endl;
-
-	//				//printf("Frame : %d , nodeName : %s, Translation : %f, %f, %f\n", (int)frame, linkNode->GetName(), translation[0], translation[1], translation[2]);
-	//				//printf("Num : %d , Frame : %d , nodeName : %s, Rotation : %.2f,%.2f,%.2f\n", k, (int)frame, linkNode->GetName(), rotation[0], rotation[1], rotation[2]);
-	//				//printf("Frame : %d , nodeName : %s, Quaternion : %f, %f, %f, %f\n", (int)frame, linkNode->GetName(), quaternion[0], quaternion[1], quaternion[2], quaternion[3]);
-	//				
-	//				// k == 1 || k == 3 || k == 4 || k == 5 || k == 18 || k == 19 || k == 21 || k == 33 || k == 34 || k == 35 || k == 36 || k == 37 || k == 38 || k == 49 || k == 50 || k == 51 || k == 55 || k == 77 || k == 78 || k == 79 || k == 83
-	//				// k == 2 || k == 4 || k == 5 || k == 6 || k == 28 || k == 29 || k == 32 || k == 52 || k == 53 || k == 54 || k == 55 || k == 56 || k == 57 || k == 73 || k == 74 || k == 75 || k == 81 || k == 111 || k == 112 || k == 113 || k == 119
-	//				// k == 0 || k == 1 || k == 2 || k == 3 || k == 4 || k == 5 || k == 6 || k == 7 || k == 8 || k == 9 || k == 10 || k == 31 || k == 32 || k == 33 || k == 34 || k == 55 || k == 56 || k == 57 || k == 60 || k == 61 || k == 62
-	//				// k == 1 || k == 2 || k == 3 || k == 4 || k == 5 || k == 6 || k == 7 || k == 8 || k == 9 || k == 10 || k == 11 || k == 32 || k == 33 || k == 34 || k == 35 || k == 56 || k == 57 || k == 58 || k == 61 || k == 62 || k == 63
-	//				if(k == 1 || k == 2 || k == 3 || k == 4 || k == 5 || k == 6 || k == 7 || k == 8 || k == 26 || k == 27 || k == 65 || k == 66 || k == 67 || k == 68 || k == 88 || k == 89 || k == 91 || k == 94 || k == 95 || k == 97 || k == 99)
-	//				{
-	//					//printf("nodeName : %s, Quaternion : %f, %f, %f, %f\n", linkNode->GetName(), quaternion[0], quaternion[1], quaternion[2], quaternion[3]);
-	//					if (k == 1)
-	//					{
-	//						//printf("%.2f,%.2f,%.2f", translation[0], translation[1], translation[2]);
-	//						//printf("Frame : %d , nodeName : %s, Translation : %f, %f, %f\n", (int)frame, linkNode->GetName(), translation[0], translation[1], translation[2]);
-	//					
-	//						for (int i = 0; i < 3; i++)
-	//						{
-	//							float Trans = translation[i];
-	//							unsigned char Bytes[4];
-	//							memcpy(Bytes, &Trans, 4);
-
-	//							//SendBuf의 40~51번째 바이트에 저장
-	//							SendMotionBuf[40 + i * 4] = Bytes[0];
-	//							SendMotionBuf[41 + i * 4] = Bytes[1];
-	//							SendMotionBuf[42 + i * 4] = Bytes[2];
-	//							SendMotionBuf[43 + i * 4] = Bytes[3];
-
-	//						}							
-
-	//						//for (int i = 0; i < 4; i++)
-	//						//{
-	//						//	//cout << "quaternion : " << quaternion[i] << endl;
-	//						//	float Quat = quaternion[i];
-	//						//	unsigned char Bytes[4];
-	//						//	memcpy(Bytes, &Quat, 4);
-
-
-	//						//	//SendBuf의 54~389번째 바이트에 저장
-	//						//	SendBuf[54 + i * 4 + (Reset * 16)] = Bytes[0];
-	//						//	SendBuf[55 + i * 4 + (Reset * 16)] = Bytes[1];
-	//						//	SendBuf[56 + i * 4 + (Reset * 16)] = Bytes[2];
-	//						//	SendBuf[57 + i * 4 + (Reset * 16)] = Bytes[3];
-
-
-	//						//	unsigned int combinedInt = 0;
-	//						//	combinedInt |= Bytes[0];
-	//						//	combinedInt |= (Bytes[1] << 8);
-	//						//	combinedInt |= (Bytes[2] << 16);
-	//						//	combinedInt |= (Bytes[3] << 24);
-
-	//						//	float restoredFloat = *reinterpret_cast<float*>(&combinedInt);
-
-	//						//	//std::cout << "Restored float: " << restoredFloat << std::endl;
-	//						//}
-
-	//					}
-
-	//					//printf(",%.4f,%.4f,%.4f,%.4f\n", quaternion[0], quaternion[1], quaternion[2], quaternion[3]);
-	//					//printf("Num : %d , Frame : %d , nodeName : %s, Rotation : %.2f,%.2f,%.2f\n", k, (int)frame, linkNode->GetName(), rotation[0], rotation[1], rotation[2]);
-	//					
-	//					//quaternion을 4바이트로 쪼갠 뒤 SendBuf의 54~389번 바이트에 저장
-	//					for (int i = 0; i < 4; i++)
-	//					{
-	//						float Quat = quaternion[i];
-	//						unsigned char Bytes[4];
-	//						memcpy(Bytes, &Quat, 4);
-
-	//						
-	//						//SendBuf의 54~389번째 바이트에 저장
-	//						SendMotionBuf[57 + i * 4 + (Reset * 16)] = Bytes[0];
-	//						SendMotionBuf[56 + i * 4 + (Reset * 16)] = Bytes[1];
-	//						SendMotionBuf[55 + i * 4 + (Reset * 16)] = Bytes[2];
-	//						SendMotionBuf[54 + i * 4 + (Reset * 16)] = Bytes[3];
-
-
-	//						unsigned int combinedInt = 0;
-	//						combinedInt |= Bytes[0];
-	//						combinedInt |= (Bytes[1] << 8);
-	//						combinedInt |= (Bytes[2] << 16);
-	//						combinedInt |= (Bytes[3] << 24);
-
-	//						float restoredFloat = *reinterpret_cast<float*>(&combinedInt);
-
-	//						//std::cout << "Restored float: " << restoredFloat << std::endl;
-
-	//						//printf("Num : %d , Frame : %d , nodeName : %s, Rotation : %.2f,%.2f,%.2f\n", k, (int)frame, linkNode->GetName(), rotation[0], rotation[1], rotation[2]);
-	//					}
-
-	//					//printf(",%.2f,%.2f,%.2f", rotation[0], rotation[1], rotation[2]);
-	//					//printf("Frame : %d , nodeName : %s, Rotation : %.2f,%.2f,%.2f\n", (int)frame, linkNode->GetName(), rotation[0], rotation[1], rotation[2]);
-	//				
-	//					Reset = Reset + 1;
-	//				}
-	//				
-	//				
-	//				
-	//				//printf(",%.1f,%.1f,%.1f", rotation[0], rotation[1], rotation[2]);
-	//				//printf(",%.1f, %.1f, %.1f", translation[0], translation[1], translation[2]);
-	//				
-	//				
-	//			}
-	//			
-	//			send(MotionSocket, SendMotionBuf, sizeof(SendMotionBuf), 0);
-	//			//cout << "SendBuf : " << SendBuf << endl;
-
-	//			Reset = 0;
-
-	//			this_thread::sleep_for(10ms);
-
-	//			std::cout << endl;
-
-	//		}
-
-
-	//		//모프타겟 데이터 추출
-
-	//		int morphTargetCount = mesh->GetDeformerCount(FbxDeformer::eBlendShape);
-	//		//cout << "morphTargetCount : " << morphTargetCount << endl;
-
-	//		// Loop through the Morph Targets (blend shapes) and extract vertex positions
-	//		for (int morphIndex = 0; morphIndex < morphTargetCount; ++morphIndex)
-	//		{
-	//			FbxBlendShape* blendShape = static_cast<FbxBlendShape*>(mesh->GetDeformer(morphIndex, FbxDeformer::eBlendShape));
-
-	//			// Get the number of channels (shapes) within the blend shape
-	//			int channelCount = blendShape->GetBlendShapeChannelCount();
-
-	//			// Loop through the channels (shapes) and extract vertex positions
-	//			for (int channelIndex = 0; channelIndex < channelCount; ++channelIndex)
-	//			{
-	//				FbxBlendShapeChannel* channel = blendShape->GetBlendShapeChannel(channelIndex);
-
-	//				// Get the channel (shape) name (morph target name)
-	//				const char* morphTargetName = channel->GetName();
-
-	//				// Get the weight of the channel (shape)
-	//				double weight = channel->DeformPercent;
-	//				//cout << "weight : " << weight << endl;
-
-	//				// Get the number of control points (vertices) in the channel (shape)
-	//				int vertexCount = channel->GetTargetShapeCount();
-
-	//				// fbxanimlayer
-	//				FbxAnimLayer* animLayer = animStack->GetMember<FbxAnimLayer>();
-
-	//				// shape의 value를 가져옴
-	//				FbxAnimCurve* animCurve = mesh->GetShapeChannel(morphIndex, channelIndex, animLayer, true);
-	//				if (animCurve)
-	//				{
-	//					int keyCount = animCurve->KeyGetCount();
-
-	//					FbxAnimCurveKey key = animCurve->KeyGet(frame);
-	//					float value = key.GetValue();
-
-	//					if (channelIndex == 2 || channelIndex == 17 || channelIndex == 19 || channelIndex == 20 || channelIndex == 24 || channelIndex == 25 || channelIndex == 26 || channelIndex == 27 || channelIndex == 28 || channelIndex == 29 || channelIndex == 35 || channelIndex == 36 || channelIndex == 41 || channelIndex == 42 || channelIndex == 46 || channelIndex == 47 || channelIndex == 69 || channelIndex == 70 || channelIndex == 74)
-	//					{
-	//						float FacialData = value;
-	//						unsigned char Bytes[4];
-	//						memcpy(Bytes, &FacialData, 4);
-
-	//						//SendBuf의 54~번째 바이트에 저장
-	//						SendFacialBuf[57 + (Reset * 4)] = Bytes[0];
-	//						SendFacialBuf[56 + (Reset * 4)] = Bytes[1];
-	//						SendFacialBuf[55 + (Reset * 4)] = Bytes[2];
-	//						SendFacialBuf[54 + (Reset * 4)] = Bytes[3];
-
-	//						Reset = Reset + 1;
-
-	//					}
-	//				}
-
-	//			}
-
-	//			//int SendFacialBytes = send(FacialSocket, SendFacialBuf, sizeof(SendFacialBuf), 0);
-	//			//cout << SendFacialBytes << endl;
-	//			//Reset = 0;
-
-	//			//this_thread::sleep_for(ms);
-	//		}
-	//		
-	//	}
-
-	//}
 
 
 	scene->Destroy();

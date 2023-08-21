@@ -44,7 +44,7 @@ int main_4()
     //sf::sleep(sf::seconds(5));
 
 
-    this_thread::sleep_for(10s);
+    this_thread::sleep_for(5s);
 
 
     // Stop recording

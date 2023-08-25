@@ -12,16 +12,21 @@
 #pragma comment(lib, "ws2_32.lib")
 #pragma comment(lib, "libfbxsdk-mt.lib")
 
-
 using namespace std;
 
-int Reset = 0;
 
-void SendMotion(FbxScene* scene, SOCKET MotionSocket, SOCKET FacialSocket, SOCKET recvMotionSocket, char* RecvBuf, FbxManager* manager, FbxImporter* importer)
+void SendMotion(SOCKET MotionSocket, SOCKET FacialSocket, SOCKET recvMotionSocket, char* RecvBuf, int actorIdx)
 {
 	// recvMotionSocket
 
+	int ActorIdx = actorIdx;
 	
+	FbxManager* manager = FbxManager::Create();
+	FbxIOSettings* ios = FbxIOSettings::Create(manager, IOSROOT);
+	manager->SetIOSettings(ios);
+	FbxImporter* importer = FbxImporter::Create(manager, "");
+	FbxScene* scene = FbxScene::Create(manager, "");
+
 	while (true)
 	{
 		cout << "aaaaaaaaaaa" << endl;
@@ -29,8 +34,12 @@ void SendMotion(FbxScene* scene, SOCKET MotionSocket, SOCKET FacialSocket, SOCKE
 		char recvMotionBuf[1024];
 		recv(recvMotionSocket, recvMotionBuf, sizeof(recvMotionBuf), 0);
 
+		cout << "ActorIdx : " << recvMotionBuf[0] << endl;
+
+		if (recvMotionBuf[0] != ActorIdx)
+			continue;
 		
-		if (recvMotionBuf[0] == 1)
+		if (recvMotionBuf[1] == 1)
 		{
 			cout << "recvMotionBuf[0] == 1" << endl;
 			const char* fbxFilePath = "C:/FBXtest/20230823_dance_face1_Anim.FBX";
@@ -42,7 +51,7 @@ void SendMotion(FbxScene* scene, SOCKET MotionSocket, SOCKET FacialSocket, SOCKE
 			else
 				return;
 		}
-		else if (recvMotionBuf[0] == 2)
+		else if (recvMotionBuf[1] == 2)
 		{
 			cout << "recvMotionBuf[0] == 2" << endl;
 			const char* fbxFilePath = "C:/FBXtest/20230823_dance_face2_Anim.FBX";
@@ -54,7 +63,7 @@ void SendMotion(FbxScene* scene, SOCKET MotionSocket, SOCKET FacialSocket, SOCKE
 			else
 				return;
 		}
-		else if (recvMotionBuf[0] == 3)
+		else if (recvMotionBuf[1] == 3)
 		{
 			cout << "recvMotionBuf[0] == 3" << endl;
 			const char* fbxFilePath = "C:/FBXtest/20230823_dance_face3_Anim.FBX";
@@ -69,12 +78,11 @@ void SendMotion(FbxScene* scene, SOCKET MotionSocket, SOCKET FacialSocket, SOCKE
 		else
 			return;
 
-		cout << "ActorIdx : " << recvMotionBuf[1] << endl;
-			 
+		
 		int motionReset = 0;
 		int facialReset = 0;
-		char SendMotionBuf[] = { 80,67,76,83,48,48,48,50,0,0,0,0,0,0,0,0,50,48,50,51,48,56,48,50,49,55,53,52,52,53,0,0,1,100,  RecvBuf[34],RecvBuf[35],RecvBuf[36],RecvBuf[37],  0,recvMotionBuf[1],  197,169,24,0,70,17,148,0,199,6,147,0,0,21,  61,143,92,41,128,0,0,0,63,128,0,0,60,163,215,10,189,184,81,236,62,5,30,184,63,125,112,164,188,35,215,10,61,35,215,10,62,66,143,92,63,122,225,72,61,143,92,41,60,35,215,10,60,245,194,143,63,128,0,0,61,184,81,236,189,184,81,236,189,245,194,143,63,125,112,164,61,76,204,205,61,117,194,143,190,66,143,92,63,122,225,72,60,245,194,143,0,0,0,0,189,143,92,41,63,128,0,0,60,163,215,10,62,56,81,236,188,245,194,143,63,122,225,72,60,245,194,143,62,66,143,92,188,163,215,10,63,122,225,72,60,245,194,143,62,76,204,205,188,163,215,10,63,122,225,72,61,35,215,10,62,46,20,123,128,0,0,0,63,122,225,72,60,163,215,10,62,46,20,123,128,0,0,0,63,122,225,72,60,163,215,10,62,25,153,154,60,35,215,10,63,125,112,164,60,35,215,10,62,76,204,205,190,56,81,236,63,117,194,143,60,35,215,10,60,245,194,143,191,33,71,174,63,69,30,184,61,143,92,41,62,128,0,0,191,25,153,154,63,53,194,143,190,133,30,184,61,184,81,236,190,194,143,92,63,102,102,102,190,66,143,92,62,97,71,174,62,15,92,41,63,117,194,143,61,184,81,236,62,235,133,31,63,12,204,205,63,25,153,154,62,174,20,123,62,97,71,174,63,35,215,10,63,48,163,215,62,138,61,113,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 };
-		char SendFacialBuf[] = { 80,67,76,83,48,48,48,53,0,0,0,0,0,0,0,0,50,48,50,51,48,56,48,50,49,55,53,52,52,53,0,0,0,228,  RecvBuf[34],RecvBuf[35],RecvBuf[36],RecvBuf[37],  0,recvMotionBuf[1],  0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 52, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+		char SendMotionBuf[] = { 80,67,76,83,48,48,48,50,0,0,0,0,0,0,0,0,50,48,50,51,48,56,48,50,49,55,53,52,52,53,0,0,1,100,  RecvBuf[34],RecvBuf[35],RecvBuf[36],RecvBuf[37],  0,ActorIdx,  197,169,24,0,70,17,148,0,199,6,147,0,0,21,  61,143,92,41,128,0,0,0,63,128,0,0,60,163,215,10,189,184,81,236,62,5,30,184,63,125,112,164,188,35,215,10,61,35,215,10,62,66,143,92,63,122,225,72,61,143,92,41,60,35,215,10,60,245,194,143,63,128,0,0,61,184,81,236,189,184,81,236,189,245,194,143,63,125,112,164,61,76,204,205,61,117,194,143,190,66,143,92,63,122,225,72,60,245,194,143,0,0,0,0,189,143,92,41,63,128,0,0,60,163,215,10,62,56,81,236,188,245,194,143,63,122,225,72,60,245,194,143,62,66,143,92,188,163,215,10,63,122,225,72,60,245,194,143,62,76,204,205,188,163,215,10,63,122,225,72,61,35,215,10,62,46,20,123,128,0,0,0,63,122,225,72,60,163,215,10,62,46,20,123,128,0,0,0,63,122,225,72,60,163,215,10,62,25,153,154,60,35,215,10,63,125,112,164,60,35,215,10,62,76,204,205,190,56,81,236,63,117,194,143,60,35,215,10,60,245,194,143,191,33,71,174,63,69,30,184,61,143,92,41,62,128,0,0,191,25,153,154,63,53,194,143,190,133,30,184,61,184,81,236,190,194,143,92,63,102,102,102,190,66,143,92,62,97,71,174,62,15,92,41,63,117,194,143,61,184,81,236,62,235,133,31,63,12,204,205,63,25,153,154,62,174,20,123,62,97,71,174,63,35,215,10,63,48,163,215,62,138,61,113,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 };
+		char SendFacialBuf[] = { 80,67,76,83,48,48,48,53,0,0,0,0,0,0,0,0,50,48,50,51,48,56,48,50,49,55,53,52,52,53,0,0,0,228,  RecvBuf[34],RecvBuf[35],RecvBuf[36],RecvBuf[37],  0,ActorIdx,  0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 52, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
 		FbxNode* rootNode = scene->GetRootNode();
 		if (rootNode == nullptr)
@@ -357,6 +365,9 @@ void SendMotion(FbxScene* scene, SOCKET MotionSocket, SOCKET FacialSocket, SOCKE
 		}
 	}
 	
+	scene->Destroy();
+	importer->Destroy();
+	manager->Destroy();
 }
 
 void SendEvent(SOCKET EventSocket, char* RecvBuf)
@@ -416,6 +427,33 @@ void SendEvent(SOCKET EventSocket, char* RecvBuf)
 	
 }
 
+
+void ConnectFbxReader(SOCKET recvMotionSocket, int FbxReaderIdx, int actorIdx)
+{
+	SOCKET FbxReaderSocket = socket(AF_INET, SOCK_STREAM, 0);
+
+	SOCKADDR_IN FbxReaderAddr;
+	ZeroMemory(&FbxReaderAddr, sizeof(FbxReaderAddr));
+	FbxReaderAddr.sin_family = AF_INET;
+	FbxReaderAddr.sin_port = htons(FbxReaderIdx);
+	FbxReaderAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
+
+	if(connect(FbxReaderSocket, (SOCKADDR*)&FbxReaderAddr, sizeof(FbxReaderAddr)) == SOCKET_ERROR)
+		cout << "FbxReaderSocket Connect Error" << endl;
+	cout << "FbxReaderSocket Connect Success" << endl;
+
+	char SendActorIdxBuf[2] = { actorIdx, };
+	send(FbxReaderSocket, SendActorIdxBuf, sizeof(SendActorIdxBuf), 0);
+
+	while (true)
+	{
+		char recvBuf[2];
+		recv(recvMotionSocket, recvBuf, sizeof(recvBuf), 0);
+
+		send(FbxReaderSocket, recvBuf, sizeof(recvBuf), 0);
+	}
+
+}
 
 int main()
 {
@@ -547,7 +585,17 @@ int main()
 
 	/* ----------------------------- */
 
-	SOCKET recvSocket = socket(AF_INET, SOCK_STREAM, 0);
+	// Create Fbx 
+	/*FbxManager* manager = FbxManager::Create();
+	FbxIOSettings* ios = FbxIOSettings::Create(manager, IOSROOT);
+	manager->SetIOSettings(ios);
+	FbxImporter* importer = FbxImporter::Create(manager, "");
+	FbxScene* scene = FbxScene::Create(manager, "");*/
+
+
+	// Listen Socket
+
+	SOCKET recvListenSocket = socket(AF_INET, SOCK_STREAM, 0);
 
 	SOCKADDR_IN recvMotionAddr;
 	ZeroMemory(&recvMotionAddr, sizeof(recvMotionAddr));
@@ -555,34 +603,53 @@ int main()
 	recvMotionAddr.sin_port = htons(9999);
 	recvMotionAddr.sin_addr.s_addr = htonl(INADDR_ANY);
 
-	bind(recvSocket, (SOCKADDR*)&recvMotionAddr, sizeof(recvMotionAddr));
-	listen(recvSocket, SOMAXCONN);
+	bind(recvListenSocket, (SOCKADDR*)&recvMotionAddr, sizeof(recvMotionAddr));
+	listen(recvListenSocket, SOMAXCONN);
 
-	SOCKET recvMotionSocket = accept(recvSocket, NULL, NULL);
+	/*SOCKET recvMotionSocket = accept(recvListenSocket, NULL, NULL);
 	if (recvMotionSocket == INVALID_SOCKET)
 		cout << "recvMotionSocket Accept Fail" << endl;
 
-	cout << "recvMotionSocket Accept Success" << endl;
+	cout << "recvMotionSocket Accept Success" << endl;*/
+
+
+	fd_set ReadSet;
+	fd_set CopySet;
+	FD_ZERO(&ReadSet);
+
+	FD_SET(recvListenSocket, &ReadSet);
+
+	TIMEVAL TimeOut;
+	TimeOut.tv_sec = 1;
+
+	int actorIdx = 1;
+	int FbxReaderIdx = 5551;
+
+	vector<thread> motionThreads;
+
+	while (true)
+	{
+		SOCKADDR_IN ClientSockAddr;
+		memset(&ClientSockAddr, 0, sizeof(ClientSockAddr));
+		int ClientSockAddrSize = sizeof(ClientSockAddr);
+		SOCKET recvMotionSocket = accept(recvListenSocket, (SOCKADDR*)&ClientSockAddr, &ClientSockAddrSize);
+		cout << "Socket Name : " << recvMotionSocket << endl;
+		char SocketNumBuf[] = { actorIdx };
+		send(recvMotionSocket, SocketNumBuf, 1, 0);
+
+		motionThreads.push_back(thread(ConnectFbxReader, recvMotionSocket, FbxReaderIdx, actorIdx));
+
+		actorIdx++;
+		FbxReaderIdx++;
+	}
+
+	for(auto &thread : motionThreads)
+		thread.join();
 
 	
-	FbxManager* manager = FbxManager::Create();
-	FbxIOSettings* ios = FbxIOSettings::Create(manager, IOSROOT);
-	manager->SetIOSettings(ios);
-	FbxImporter* importer = FbxImporter::Create(manager, "");
-	FbxScene* scene = FbxScene::Create(manager, "");
 
-
-	thread motionThread(SendMotion, scene, MotionSocket, FacialSocket, recvMotionSocket, RecvBuf, manager, importer);
-	thread eventThread(SendEvent, EventSocket, RecvBuf);
 
 	
-	motionThread.join();
-	eventThread.join();
-
-
-	scene->Destroy();
-	importer->Destroy();
-	manager->Destroy();
 
 
 	return 0;

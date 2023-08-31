@@ -7,6 +7,8 @@
 #include <mutex>
 #include <vector>
 
+#include <cstdlib>
+
 #include <Windows.h>
 #include <tchar.h>
 
@@ -79,47 +81,42 @@ void ConnectFbxReader(SOCKET recvMotionSocket, SOCKET EventSocket, int FbxReader
 
 int main()
 {
-	// FbxReader exe
+	/*     FbxReader exe     */
 
+	vector<const char*> exePaths;
+	exePaths.push_back("C:/Users/monsterslab/Desktop/Project2/FbxReader/FbxReader.exe");
+	exePaths.push_back("C:/Users/monsterslab/Desktop/Project2/FbxReader/FbxReader2.exe");
+	exePaths.push_back("C:/Users/monsterslab/Desktop/Project2/FbxReader/FbxReader3.exe");
+	exePaths.push_back("C:/Users/monsterslab/Desktop/Project2/FbxReader/FbxReader4.exe");
+	exePaths.push_back("C:/Users/monsterslab/Desktop/Project2/FbxReader/FbxReader5.exe");
 
-	//TCHAR exePath[] = _T("C:/Project2/FbxReader/FbxReader.exe");
-
-	vector<wstring> exePaths;
-	exePaths.push_back(_T("C:/Users/monsterslab/Desktop/Project2/FbxReader/FbxReader.exe"));
-	exePaths.push_back(_T("C:/Users/monsterslab/Desktop/Project2/FbxReader/FbxReader2.exe"));
-	exePaths.push_back(_T("C:/Users/monsterslab/Desktop/Project2/FbxReader/FbxReader3.exe"));
-	exePaths.push_back(_T("C:/Users/monsterslab/Desktop/Project2/FbxReader/FbxReader4.exe"));
-	//exePaths.push_back(_T("C:/Users/monsterslab/Desktop/Project2/FbxReader/FbxReader5.exe"));
-
-	STARTUPINFO si;
-	PROCESS_INFORMATION pi;
-
-	ZeroMemory(&si, sizeof(si));
-	si.cb = sizeof(si);
-	ZeroMemory(&pi, sizeof(pi));
-
-	for (auto& Path : exePaths)
+	for (auto& exePath : exePaths)
 	{
-		const wchar_t* exePath = Path.c_str();
+		// Convert narrow char path to wide char path
+		int widePathLen = MultiByteToWideChar(CP_UTF8, 0, exePath, -1, NULL, 0);
+		wchar_t* wideExePath = new wchar_t[widePathLen];
+		MultiByteToWideChar(CP_UTF8, 0, exePath, -1, wideExePath, widePathLen);
 
-		if (CreateProcess(nullptr, (LPWSTR)exePath, nullptr, nullptr, false, 0, nullptr, nullptr, &si, &pi))
-		{
-			CloseHandle(pi.hProcess);
-			CloseHandle(pi.hThread);
-			cout << "CreateProcess Success" << endl;
+		STARTUPINFO startupInfo = { sizeof(startupInfo) };
+		PROCESS_INFORMATION processInfo;
+
+		if (CreateProcess(NULL, wideExePath, NULL, NULL, FALSE, 0, NULL, NULL, &startupInfo, &processInfo)) {
+			std::wcout << L"External program started successfully." << std::endl;
+			// You can proceed with your main program logic here while the external program runs.
+
+			// Close handles to avoid resource leaks
+			CloseHandle(processInfo.hProcess);
+			CloseHandle(processInfo.hThread);
 		}
-		else
-		{
-			cout << "CreateProcess Error" << endl;
-			return 0;
+		else {
+			std::wcerr << L"Failed to start external program." << std::endl;
 		}
+
+		// Clean up the wide string memory
+		delete[] wideExePath;
 	}
+
 	
-
-
-	/*--------------------------------*/
-
-
 	WSAData wasData;
 	int Result = WSAStartup(MAKEWORD(2, 2), &wasData);
 
@@ -187,31 +184,54 @@ int main()
 	bind(recvListenSocket, (SOCKADDR*)&recvMotionAddr, sizeof(recvMotionAddr));
 	listen(recvListenSocket, SOMAXCONN);
 
+	SOCKADDR_IN PerformerSockAddr;
+	memset(&PerformerSockAddr, 0, sizeof(PerformerSockAddr));
+	int ClientSockAddrSize = sizeof(PerformerSockAddr);
+	SOCKET PerformerSocket = accept(recvListenSocket, (SOCKADDR*)&PerformerSockAddr, &ClientSockAddrSize);
 
-	int actorIdx = 1;
+	char PerformerRecvBuf[6];
+	int recvBytes = recv(PerformerSocket, PerformerRecvBuf, sizeof(PerformerRecvBuf), 0);
+
+	cout << "recvBytes : " << recvBytes << endl;
+
+	for(int i = 0; i < recvBytes; i++)
+		cout << "PerformerRecvBuf[" << i << "] : " << (int)PerformerRecvBuf[i] << endl;
+
+	
+	/* Connect to FbxReader */
+
 	int FbxReaderIdx = 5551;
 
-	vector<thread> motionThreads;
+	//vector<SOCKET> sockets;
 
-	while (true)
+	for (int i = 0; i < /*recvBytes - 1*/5; i++)
 	{
-		SOCKADDR_IN ClientSockAddr;
-		memset(&ClientSockAddr, 0, sizeof(ClientSockAddr));
-		int ClientSockAddrSize = sizeof(ClientSockAddr);
-		SOCKET recvMotionSocket = accept(recvListenSocket, (SOCKADDR*)&ClientSockAddr, &ClientSockAddrSize);
-		cout << "Socket Name : " << recvMotionSocket << endl;
-		char SocketNumBuf[] = { actorIdx };
-		send(recvMotionSocket, SocketNumBuf, 1, 0);
+		SOCKET recvPerformerSocket = socket(AF_INET, SOCK_STREAM, 0);
 
-		motionThreads.push_back(thread(ConnectFbxReader, recvMotionSocket, EventSocket, FbxReaderIdx, actorIdx, RecvBuf));
+		SOCKADDR_IN recvPerformerAddr;
+		ZeroMemory(&recvPerformerAddr, sizeof(recvPerformerAddr));
+		recvPerformerAddr.sin_family = AF_INET;
+		recvPerformerAddr.sin_port = htons(FbxReaderIdx);
+		recvPerformerAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
 
-		actorIdx++;
+		if (connect(recvPerformerSocket, (SOCKADDR*)&recvPerformerAddr, sizeof(recvPerformerAddr)) == SOCKET_ERROR)
+			cout << "Connect Error" << endl;
+
+		cout << "Connect Success" << endl;
+
+		char PerformerSendBuf[1] = { /*PerformerRecvBuf[1 + i]*/1};
+		send(recvPerformerSocket, PerformerSendBuf, sizeof(PerformerSendBuf), 0);
+
+		//sockets.push_back(recvPerformerSocket);
 		FbxReaderIdx++;
 	}
 
-	for(auto &thread : motionThreads)
-		thread.join();
+	while (true)
+	{
 
+	}
+
+	
 	
 
 

@@ -81,42 +81,6 @@ void ConnectFbxReader(SOCKET recvMotionSocket, SOCKET EventSocket, int FbxReader
 
 int main()
 {
-	/*     FbxReader exe     */
-
-	vector<const char*> exePaths;
-	exePaths.push_back("C:/Users/monsterslab/Desktop/Project2/FbxReader/FbxReader.exe");
-	exePaths.push_back("C:/Users/monsterslab/Desktop/Project2/FbxReader/FbxReader2.exe");
-	exePaths.push_back("C:/Users/monsterslab/Desktop/Project2/FbxReader/FbxReader3.exe");
-	exePaths.push_back("C:/Users/monsterslab/Desktop/Project2/FbxReader/FbxReader4.exe");
-	exePaths.push_back("C:/Users/monsterslab/Desktop/Project2/FbxReader/FbxReader5.exe");
-
-	for (auto& exePath : exePaths)
-	{
-		// Convert narrow char path to wide char path
-		int widePathLen = MultiByteToWideChar(CP_UTF8, 0, exePath, -1, NULL, 0);
-		wchar_t* wideExePath = new wchar_t[widePathLen];
-		MultiByteToWideChar(CP_UTF8, 0, exePath, -1, wideExePath, widePathLen);
-
-		STARTUPINFO startupInfo = { sizeof(startupInfo) };
-		PROCESS_INFORMATION processInfo;
-
-		if (CreateProcess(NULL, wideExePath, NULL, NULL, FALSE, 0, NULL, NULL, &startupInfo, &processInfo)) {
-			std::wcout << L"External program started successfully." << std::endl;
-			// You can proceed with your main program logic here while the external program runs.
-
-			// Close handles to avoid resource leaks
-			CloseHandle(processInfo.hProcess);
-			CloseHandle(processInfo.hThread);
-		}
-		else {
-			std::wcerr << L"Failed to start external program." << std::endl;
-		}
-
-		// Clean up the wide string memory
-		delete[] wideExePath;
-	}
-
-	
 	WSAData wasData;
 	int Result = WSAStartup(MAKEWORD(2, 2), &wasData);
 
@@ -125,7 +89,7 @@ int main()
 	SOCKADDR_IN ServerAddr;
 	ZeroMemory(&ServerAddr, sizeof(ServerAddr));
 	ServerAddr.sin_family = AF_INET;
-	ServerAddr.sin_port = htons(20001); //20001
+	ServerAddr.sin_port = htons(2400); //20001
 	ServerAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
 
 	if (connect(ServerSocket, (SOCKADDR*)&ServerAddr, sizeof(ServerAddr)) == SOCKET_ERROR)
@@ -161,7 +125,7 @@ int main()
 	SOCKADDR_IN EventAddr;
 	ZeroMemory(&EventAddr, sizeof(EventAddr));
 	EventAddr.sin_family = AF_INET;
-	EventAddr.sin_port = htons(23001);
+	EventAddr.sin_port = htons(2402);
 	EventAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
 
 	if (connect(EventSocket, (SOCKADDR*)&EventAddr, sizeof(EventAddr)) == SOCKET_ERROR)
@@ -189,7 +153,7 @@ int main()
 	int ClientSockAddrSize = sizeof(PerformerSockAddr);
 	SOCKET PerformerSocket = accept(recvListenSocket, (SOCKADDR*)&PerformerSockAddr, &ClientSockAddrSize);
 
-	char PerformerRecvBuf[6];
+	char PerformerRecvBuf[12];
 	int recvBytes = recv(PerformerSocket, PerformerRecvBuf, sizeof(PerformerRecvBuf), 0);
 
 	cout << "recvBytes : " << recvBytes << endl;
@@ -198,13 +162,49 @@ int main()
 		cout << "PerformerRecvBuf[" << i << "] : " << (int)PerformerRecvBuf[i] << endl;
 
 	
+	/*     FbxReader exe     */
+
+	vector<const char*> exePaths;
+	exePaths.push_back("C:/Users/monsterslab/Desktop/Project2/FbxReader/FbxReader.exe");
+	exePaths.push_back("C:/Users/monsterslab/Desktop/Project2/FbxReader/FbxReader2.exe");
+	exePaths.push_back("C:/Users/monsterslab/Desktop/Project2/FbxReader/FbxReader3.exe");
+	exePaths.push_back("C:/Users/monsterslab/Desktop/Project2/FbxReader/FbxReader4.exe");
+	exePaths.push_back("C:/Users/monsterslab/Desktop/Project2/FbxReader/FbxReader5.exe");
+
+	for (int i = 0; i < PerformerRecvBuf[0]; i++)
+	{
+		// Convert narrow char path to wide char path
+		int widePathLen = MultiByteToWideChar(CP_UTF8, 0, exePaths[i], -1, NULL, 0);
+		wchar_t* wideExePath = new wchar_t[widePathLen];
+		MultiByteToWideChar(CP_UTF8, 0, exePaths[i], -1, wideExePath, widePathLen);
+
+		STARTUPINFO startupInfo = { sizeof(startupInfo) };
+		PROCESS_INFORMATION processInfo;
+
+		if (CreateProcess(NULL, wideExePath, NULL, NULL, FALSE, 0, NULL, NULL, &startupInfo, &processInfo)) {
+			std::wcout << L"External program started successfully." << std::endl;
+			// You can proceed with your main program logic here while the external program runs.
+
+			// Close handles to avoid resource leaks
+			CloseHandle(processInfo.hProcess);
+			CloseHandle(processInfo.hThread);
+		}
+		else {
+			std::wcerr << L"Failed to start external program." << std::endl;
+		}
+
+		// Clean up the wide string memory
+		delete[] wideExePath;
+	}
+
+
 	/* Connect to FbxReader */
 
 	int FbxReaderIdx = 5551;
 
 	//vector<SOCKET> sockets;
 
-	for (int i = 0; i < /*recvBytes - 1*/5; i++)
+	for (int i = 0; i < (int)PerformerRecvBuf[0]; i++)
 	{
 		SOCKET recvPerformerSocket = socket(AF_INET, SOCK_STREAM, 0);
 
@@ -219,7 +219,7 @@ int main()
 
 		cout << "Connect Success" << endl;
 
-		char PerformerSendBuf[1] = { /*PerformerRecvBuf[1 + i]*/1};
+		char PerformerSendBuf[2] = { PerformerRecvBuf[2 + (i*2)], PerformerRecvBuf[3 + (i*2)]};
 		send(recvPerformerSocket, PerformerSendBuf, sizeof(PerformerSendBuf), 0);
 
 		//sockets.push_back(recvPerformerSocket);

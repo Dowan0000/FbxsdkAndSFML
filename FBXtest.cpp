@@ -125,7 +125,7 @@ int main()
 	SOCKADDR_IN EventAddr;
 	ZeroMemory(&EventAddr, sizeof(EventAddr));
 	EventAddr.sin_family = AF_INET;
-	EventAddr.sin_port = htons(2402);
+	EventAddr.sin_port = htons(PCLS_event_data_service_port);
 	EventAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
 
 	if (connect(EventSocket, (SOCKADDR*)&EventAddr, sizeof(EventAddr)) == SOCKET_ERROR)
@@ -181,7 +181,8 @@ int main()
 		STARTUPINFO startupInfo = { sizeof(startupInfo) };
 		PROCESS_INFORMATION processInfo;
 
-		if (CreateProcess(NULL, wideExePath, NULL, NULL, FALSE, 0, NULL, NULL, &startupInfo, &processInfo)) {
+		if (CreateProcess(NULL, wideExePath, NULL, NULL, FALSE, 0, NULL, NULL, &startupInfo, &processInfo)) 
+		{
 			std::wcout << L"External program started successfully." << std::endl;
 			// You can proceed with your main program logic here while the external program runs.
 
@@ -189,7 +190,8 @@ int main()
 			CloseHandle(processInfo.hProcess);
 			CloseHandle(processInfo.hThread);
 		}
-		else {
+		else 
+		{
 			std::wcerr << L"Failed to start external program." << std::endl;
 		}
 
@@ -202,7 +204,7 @@ int main()
 
 	int FbxReaderIdx = 5551;
 
-	//vector<SOCKET> sockets;
+	vector<SOCKET> sockets;
 
 	for (int i = 0; i < (int)PerformerRecvBuf[0]; i++)
 	{
@@ -219,10 +221,10 @@ int main()
 
 		cout << "Connect Success" << endl;
 
-		char PerformerSendBuf[2] = { PerformerRecvBuf[2 + (i*2)], PerformerRecvBuf[3 + (i*2)]};
+		char PerformerSendBuf[4] = { PerformerRecvBuf[0], PerformerRecvBuf[1], PerformerRecvBuf[2 + (i*2)], PerformerRecvBuf[3 + (i*2)]};
 		send(recvPerformerSocket, PerformerSendBuf, sizeof(PerformerSendBuf), 0);
 
-		//sockets.push_back(recvPerformerSocket);
+		sockets.push_back(recvPerformerSocket);
 		FbxReaderIdx++;
 	}
 
